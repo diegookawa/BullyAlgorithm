@@ -5,19 +5,20 @@ import java.util.Scanner;
 public class Process {
 
     public static final int NUMBER_OF_PROCESSES = 4;
+    public static final int FAIL_MESSAGE_NUMBER = 10;
     private int id;
     private int port;
+    private int cordinatorMessagesSent;
     private boolean isActive;
     private boolean isCordinator;
-    private byte [] m;
+    private byte[] m;
     private byte[] buffer;
     private int[] processesId;
-    private int cordinatorMessagesSent;
+    private String[] lastMessageReceived;
     private MulticastSocket multicastSocket;
     private InetAddress group;
     private DatagramPacket messageOut;
     private DatagramPacket messageIn;
-    private String lastMessageReceived;
 
     public Process (int id) {
 
@@ -31,7 +32,7 @@ public class Process {
         this.messageIn = null;
         this.buffer = null;
         this.m = null;
-        this.lastMessageReceived = "";
+        this.lastMessageReceived = null;
         this.cordinatorMessagesSent = 0;
 
     }
@@ -39,52 +40,51 @@ public class Process {
     public static void main (String args[]) throws InterruptedException {
         // 239.192.0.1 IP group
         Scanner scanner = new Scanner(System.in);
-        
         Process process;
         String group_ip;
         String message;
-        int id;
-        int option;
-        int processesActive = 0;
         boolean electionStarted = false;
+        int processesActive = 0;
+        int option;
+        int id;
 
         System.out.println("Insert your ID (Must be a number between 1 and 4):");
         id = scanner.nextInt();
         process = new Process(id);
         scanner.nextLine();
         process.processesId = new int[NUMBER_OF_PROCESSES];
+        process.lastMessageReceived = new String[2];
         process.initializeArray(process.processesId);
 
         try {
 
             System.out.println("Insert multicast group:");
             group_ip = scanner.nextLine();
-            
             process.joinMulticastGroup(process, group_ip);
             process.sendMessage("Hello! I joined the group. My ID is: " + process.id, process);
             
             while (process.isActive) {	
                 
                 process.receiveMessage(process);
-                char typeMessage = process.lastMessageReceived.charAt(0);
+                String typeMessage = process.lastMessageReceived[0];
                 
-                if (typeMessage == 'H') {
+                if (typeMessage == "NEW_PROCESS_ARRIVED") {
                     
-                    process.processesId[processesActive] = Character.getNumericValue(process.lastMessageReceived.charAt(37));
+                    process.processesId[processesActive] = Character.getNumericValue(process.lastMessageReceived[1].charAt(37));
                     processesActive++;
                     
                 }
                 
-                if (typeMessage == 'A'){
+                if (typeMessage == "ALL_PROCESSES_ARRIVED") {
 
-                    process.getIdNumbers(process.processesId, process.lastMessageReceived);
+                    process.getIdNumbers(process.processesId, process.lastMessageReceived[1]);
                     electionStarted = true;
 
                 }
 
-                if (typeMessage == 'S'){
+                if (typeMessage == "CORDINATOR_FAILED") {
 
-                    int idToRemove = Character.getNumericValue(process.lastMessageReceived.charAt(48));
+                    int idToRemove = Character.getNumericValue(process.lastMessageReceived[1].charAt(48));
                     process.removeId(process.processesId, idToRemove);
                     electionStarted = true;
 
@@ -152,7 +152,7 @@ public class Process {
 
                 }         
 
-                if (process.cordinatorMessagesSent == 9) {
+                if (process.cordinatorMessagesSent == FAIL_MESSAGE_NUMBER) {
 
                     process.sendMessage("Sorry I failed being the cordinator. My id was: " + process.id, process);
                     process.cordinatorMessagesSent = 0;
@@ -214,7 +214,7 @@ public class Process {
 
     }
 
-    private void getIdNumbers(int[] array, String message){
+    private void getIdNumbers(int[] array, String message) {
 
         for (int i = 0; i < array.length; i++){
 
@@ -279,8 +279,32 @@ public class Process {
             process.messageIn = new DatagramPacket(process.buffer, process.buffer.length);
             process.multicastSocket.receive(process.messageIn);
             String messageReceived = new String(process.messageIn.getData());
-            process.lastMessageReceived = messageReceived;
+            process.lastMessageReceived[1] = messageReceived;
             System.out.println("\nReceived: " + messageReceived);
+
+            if (messageReceived.charAt(0) == 'H') {
+
+                process.lastMessageReceived[0] = "NEW_PROCESS_ARRIVED";
+
+            }
+
+            else if (messageReceived.charAt(0) == 'A') {
+
+                process.lastMessageReceived[0] = "ALL_PROCESSES_ARRIVED";
+
+            }
+
+            else if (messageReceived.charAt(0) == 'S') {
+
+                process.lastMessageReceived[0] = "CORDINATOR_FAILED";
+
+            }
+
+            else {
+
+                process.lastMessageReceived[0] = "ERROR";
+
+            }
 
         } catch (Exception e) {
 
