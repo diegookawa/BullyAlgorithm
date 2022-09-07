@@ -5,20 +5,19 @@ import java.util.Scanner;
 public class Process {
 
     public static final int NUMBER_OF_PROCESSES = 4;
-    public int id;
-    public int port;
-    public boolean isActive;
-    public boolean isCordinator;
-    int[] processesId;
-    int cordinatorMessagesSent;
-    byte [] m;
-    byte[] buffer;
-    MulticastSocket multicastSocket;
-    InetAddress group;
-    DatagramPacket messageOut;
-    DatagramPacket messageIn;
-    String lastMessageReceived;
-    String lastMessageReceivedType;
+    private int id;
+    private int port;
+    private boolean isActive;
+    private boolean isCordinator;
+    private byte [] m;
+    private byte[] buffer;
+    private int[] processesId;
+    private int cordinatorMessagesSent;
+    private MulticastSocket multicastSocket;
+    private InetAddress group;
+    private DatagramPacket messageOut;
+    private DatagramPacket messageIn;
+    private String lastMessageReceived;
 
     public Process (int id) {
 
@@ -32,7 +31,6 @@ public class Process {
         this.messageIn = null;
         this.buffer = null;
         this.m = null;
-        this.lastMessageReceivedType = "";
         this.lastMessageReceived = "";
         this.cordinatorMessagesSent = 0;
 
