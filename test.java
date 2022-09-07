@@ -2,8 +2,9 @@ import java.net.*;
 import java.io.*;
 import java.util.Scanner;
 
-public class Process {
+public class Process extends Thread {
 
+    public static final int NUMBER_OF_PROCESSES = 4;
     public int id;
     public int port;
     public boolean isActive;
@@ -32,7 +33,7 @@ public class Process {
         this.m = null;
         this.lastMessageReceivedType = "";
         this.lastMessageReceived = "";
-
+        
     }
 
     public static void main (String args[]) throws InterruptedException {
@@ -42,16 +43,17 @@ public class Process {
         Process process;
         String group_ip;
         String message;
+        
         int id;
         int option;
-        int processesActive = 0;
+        int contId = 0;
         boolean electionStarted = false;
 
         System.out.println("Insert your ID:");
         id = scanner.nextInt();
         process = new Process(id);
         scanner.nextLine();
-        process.processesId = new int[4];
+        process.processesId = new int[NUMBER_OF_PROCESSES];
         process.initializeArray(process.processesId);
 
         try {
@@ -64,23 +66,23 @@ public class Process {
             
             while (true) {	
                 
-                char typeMessage = process.receiveMessage(process);
+                process.receiveMessage(process);
                 
-                if (typeMessage == 'H') {
+                if (process.lastMessageReceivedType == "NEW_PROCESS_ARRIVED") {
                     
-                    process.processesId[processesActive] = Character.getNumericValue(process.lastMessageReceived.charAt(37));
-                    processesActive++;
+                    process.processesId[contId] = Character.getNumericValue(process.lastMessageReceived.charAt(37));
+                    contId++;
                     
                 }
                 
-                if (typeMessage == 'A'){
+                if (process.lastMessageReceivedType == "ALL_PROCESSES_ARRIVED"){
 
                     process.getIdNumbers(process.processesId, process.lastMessageReceived);
                     electionStarted = true;
 
                 }
 
-                if (processesActive == 4) {
+                if (contId == 4) {
                     
                     message = "A";
 
@@ -91,7 +93,6 @@ public class Process {
                     }
                     
                     process.sendMessage(message, process);
-                    processesActive = 0;
 
                 }
 
@@ -103,13 +104,12 @@ public class Process {
 
                         System.out.println("Your ID is the highest. Would you like to be the cordinator?\n1 - Yes\n2 - No");
                         option = scanner.nextInt();
-                        scanner.nextLine();
 
                         if(option == 1) {
 
                             process.isCordinator = true;
-                            process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
-                            option = 0;
+                            message = "I am the Cordinator. My id is: " + process.id;
+                            process.sendMessage(message, process);
     
                         }
 
@@ -121,12 +121,15 @@ public class Process {
 
                 if (process.isCordinator) {    
 
-                    process.sendMessage("\nOlá", process);
+                    message = "\nOlá";
+                    process.m = message.getBytes();
+                    process.messageOut = new DatagramPacket(process.m, process.m.length, process.group, 6789);
+                    process.multicastSocket.send(process.messageOut);	
+                    process.buffer = new byte[1000];
                     electionStarted = false;
 
                 }         
 
-                process.buffer = new byte[1000];
                 System.out.flush();
                 Thread.sleep(1000);
                 
@@ -145,16 +148,20 @@ public class Process {
             
             // scanner.close();
 
-        } catch (Exception e) {
+        } catch (SocketException e) {
 
             System.out.println("Socket: " + e.getMessage());
 
-        }  finally {
+        } catch (IOException e) {
 
-            if(process.multicastSocket != null) process.multicastSocket.close();
+            System.out.println("IO: " + e.getMessage());
+
+        } finally {
+
+            if (process.multicastSocket != null) process.multicastSocket.close();
         
         }
-        
+
     }
 
     private void initializeArray(int[] array) {
@@ -235,22 +242,25 @@ public class Process {
 
     }
 
-    private char receiveMessage(Process process) {
+    private void receiveMessage(Process process) {
 
         try {
 
             process.messageIn = new DatagramPacket(process.buffer, process.buffer.length);
             process.multicastSocket.receive(process.messageIn);
-            String messageReceived = new String(process.messageIn.getData());
-            process.lastMessageReceived = messageReceived;
-            System.out.println("\nReceived: " + messageReceived);
-            
-            return messageReceived.charAt(0);
+            process.lastMessageReceived = new String(process.messageIn.getData());
+            System.out.println("\nReceived: " + lastMessageReceived);
+
+            if (process.lastMessageReceived.charAt(0) == 'H')
+                process.lastMessageReceivedType = "NEW_PROCESS_ARRIVED";
+
+            else if (process.lastMessageReceived.charAt(0) == 'A')
+                process.lastMessageReceivedType = "ALL_PROCESSES_ARRIVED";
+
 
         } catch (Exception e) {
 
             System.out.println("Exception: " + e.getMessage());
-            return 'e';
 
         }
 
