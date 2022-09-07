@@ -4,11 +4,13 @@ import java.util.Scanner;
 
 public class Process {
 
+    public static final int NUMBER_OF_PROCESSES = 4;
     public int id;
     public int port;
     public boolean isActive;
     public boolean isCordinator;
     int[] processesId;
+    int cordinatorMessagesSent;
     byte [] m;
     byte[] buffer;
     MulticastSocket multicastSocket;
@@ -32,6 +34,7 @@ public class Process {
         this.m = null;
         this.lastMessageReceivedType = "";
         this.lastMessageReceived = "";
+        this.cordinatorMessagesSent = 0;
 
     }
 
@@ -47,11 +50,11 @@ public class Process {
         int processesActive = 0;
         boolean electionStarted = false;
 
-        System.out.println("Insert your ID:");
+        System.out.println("Insert your ID (Must be a number between 1 and 4):");
         id = scanner.nextInt();
         process = new Process(id);
         scanner.nextLine();
-        process.processesId = new int[4];
+        process.processesId = new int[NUMBER_OF_PROCESSES];
         process.initializeArray(process.processesId);
 
         try {
@@ -62,9 +65,10 @@ public class Process {
             process.joinMulticastGroup(process, group_ip);
             process.sendMessage("Hello! I joined the group. My ID is: " + process.id, process);
             
-            while (true) {	
+            while (process.isActive) {	
                 
-                char typeMessage = process.receiveMessage(process);
+                process.receiveMessage(process);
+                char typeMessage = process.lastMessageReceived.charAt(0);
                 
                 if (typeMessage == 'H') {
                     
@@ -80,7 +84,15 @@ public class Process {
 
                 }
 
-                if (processesActive == 4) {
+                if (typeMessage == 'S'){
+
+                    int idToRemove = Character.getNumericValue(process.lastMessageReceived.charAt(48));
+                    process.removeId(process.processesId, idToRemove);
+                    electionStarted = true;
+
+                }
+
+                if (processesActive == NUMBER_OF_PROCESSES) {
                     
                     message = "A";
 
@@ -115,16 +127,43 @@ public class Process {
 
                     }
 
+                    else {
+
+                        System.out.println("Your ID is not the highest. You can start an election though. Would you like to?\n1 - Yes\n2 - No");
+                        option = scanner.nextInt();
+                        scanner.nextLine();
+
+                        if(option == 1) {
+
+                            // Begin Unicast algorithm
+                            option = 0;
+    
+                        }
+
+                    }
+
                     electionStarted = false;
 
                 }
 
                 if (process.isCordinator) {    
 
-                    process.sendMessage("\nOlá", process);
+                    process.sendMessage("Olá\n", process);
+                    process.cordinatorMessagesSent++;
                     electionStarted = false;
 
                 }         
+
+                if (process.cordinatorMessagesSent == 9) {
+
+                    process.sendMessage("Sorry I failed being the cordinator. My id was: " + process.id, process);
+                    process.cordinatorMessagesSent = 0;
+                    process.isCordinator = false;
+                    process.isActive = false;
+                    scanner.close();
+                    process.multicastSocket.leaveGroup(process.group);
+
+                }
 
                 process.buffer = new byte[1000];
                 System.out.flush();
@@ -235,7 +274,7 @@ public class Process {
 
     }
 
-    private char receiveMessage(Process process) {
+    private void receiveMessage(Process process) {
 
         try {
 
@@ -244,13 +283,21 @@ public class Process {
             String messageReceived = new String(process.messageIn.getData());
             process.lastMessageReceived = messageReceived;
             System.out.println("\nReceived: " + messageReceived);
-            
-            return messageReceived.charAt(0);
 
         } catch (Exception e) {
 
             System.out.println("Exception: " + e.getMessage());
-            return 'e';
+
+        }
+
+    }
+
+    private void removeId(int[] array, int id) {
+
+        for (int i = 0; i < array.length; i++){
+
+            if(id == array[i])
+                array[i] = -1;
 
         }
 
