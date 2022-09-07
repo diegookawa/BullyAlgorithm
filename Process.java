@@ -41,15 +41,16 @@ public class Process {
 
     public static void main (String args[]) throws InterruptedException {
         // 239.192.0.1 IP group
-        Scanner scanner = new Scanner(System.in);
-        Process process;
+        Scanner scanner; 
         String group_ip;
         String message;
+        Process process;
         boolean electionStarted = false;
         int processesActive = 0;
         int option;
         int id;
 
+        scanner = new Scanner(System.in);
         System.out.println("Insert your ID (Must be a number between 1 and 4):");
         id = scanner.nextInt();
         process = new Process(id);
@@ -123,7 +124,7 @@ public class Process {
                         option = scanner.nextInt();
                         scanner.nextLine();
 
-                        if(option == 1) {
+                        if (option == 1) {
 
                             process.isCordinator = true;
                             process.currentCordinator = process.id;
@@ -197,7 +198,8 @@ public class Process {
 
         }  finally {
 
-            if(process.multicastSocket != null) process.multicastSocket.close();
+            if (process.multicastSocket != null)
+                process.multicastSocket.close();
         
         }
         
