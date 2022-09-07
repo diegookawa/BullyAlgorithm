@@ -9,6 +9,7 @@ public class Process {
     private int id;
     private int port;
     private int cordinatorMessagesSent;
+    private int currentCordinator;
     private boolean isActive;
     private boolean isCordinator;
     private byte[] m;
@@ -34,6 +35,7 @@ public class Process {
         this.m = null;
         this.lastMessageReceived = null;
         this.cordinatorMessagesSent = 0;
+        this.currentCordinator = 0;
 
     }
 
@@ -74,6 +76,12 @@ public class Process {
                     processesActive++;
                     
                 }
+
+                if (typeMessage == "NEW_CORDINATOR") {
+
+                    process.currentCordinator = Character.getNumericValue(process.lastMessageReceived[1].charAt(31));
+
+                }
                 
                 if (typeMessage == "ALL_PROCESSES_ARRIVED") {
 
@@ -84,8 +92,8 @@ public class Process {
 
                 if (typeMessage == "CORDINATOR_FAILED") {
 
-                    int idToRemove = Character.getNumericValue(process.lastMessageReceived[1].charAt(48));
-                    process.removeId(process.processesId, idToRemove);
+                    process.removeId(process.processesId, process.currentCordinator);
+                    process.currentCordinator = 0;
                     electionStarted = true;
 
                 }
@@ -118,6 +126,7 @@ public class Process {
                         if(option == 1) {
 
                             process.isCordinator = true;
+                            process.currentCordinator = process.id;
                             process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
                             option = 0;
     
@@ -297,6 +306,12 @@ public class Process {
             else if (messageReceived.charAt(0) == 'S') {
 
                 process.lastMessageReceived[0] = "CORDINATOR_FAILED";
+
+            }
+
+            else if (messageReceived.charAt(0) == 'I') {
+
+                process.lastMessageReceived[0] = "NEW_CORDINATOR";
 
             }
 
