@@ -87,7 +87,11 @@ public class Process {
                 if (typeMessage == "ALL_PROCESSES_ARRIVED") {
 
                     process.getIdNumbers(process.processesId, process.lastMessageReceived[1]);
-                    electionStarted = true;
+                    if (process.verifyIdRepeated(process.processesId))
+                        process.sendMessage("ERROR: SAME ID VALUE", process);
+
+                    else
+                        electionStarted = true;
 
                 }
 
@@ -96,6 +100,13 @@ public class Process {
                     process.removeId(process.processesId, process.currentCordinator);
                     process.currentCordinator = 0;
                     electionStarted = true;
+
+                }
+
+                if (typeMessage == "ERROR") {
+
+                    process.multicastSocket.leaveGroup(process.group);
+                    break;
 
                 }
 
@@ -194,7 +205,7 @@ public class Process {
 
         } catch (Exception e) {
 
-            System.out.println("Socket: " + e.getMessage());
+            System.out.println("Exception: " + e.getMessage());
 
         }  finally {
 
@@ -333,12 +344,37 @@ public class Process {
 
     private void removeId(int[] array, int id) {
 
-        for (int i = 0; i < array.length; i++){
+        for (int i = 0; i < array.length; i++) {
 
             if(id == array[i])
                 array[i] = -1;
 
         }
+
+    }
+
+    private boolean verifyIdRepeated(int[] array) {
+
+        int repeated, idNumber;
+
+        for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
+
+            repeated = 0;
+            idNumber = array[i];
+
+            for (int j = 0; j < NUMBER_OF_PROCESSES; j++) {
+
+                if (array[j] == idNumber)
+                    repeated++;
+
+            }
+
+            if (repeated >= 2)
+                return true;
+
+        }
+
+        return false;
 
     }
 
