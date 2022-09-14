@@ -13,12 +13,16 @@ public class Process {
     private boolean isCordinator;
     private byte[] m;
     private byte[] buffer;
+    private byte[] mUnicast;
+    private byte[] bufferUnicast;
     private int[] processesId;
     private String[] lastMessageReceived;
     private MulticastSocket multicastSocket;
     private InetAddress group;
     private DatagramPacket messageOut;
     private DatagramPacket messageIn;
+    private DatagramSocket socket;
+    private DatagramSocket socketReceive;
 
     public Process (int id) {
 
@@ -34,6 +38,10 @@ public class Process {
         this.lastMessageReceived = null;
         this.cordinatorMessagesSent = 0;
         this.currentCordinator = 0;
+        this.socket = null;
+        this.socketReceive = null;
+        this.bufferUnicast = null;
+        this.mUnicast = null;
 
     }
 
@@ -60,6 +68,16 @@ public class Process {
 
         try {
 
+            process.socketReceive = new DatagramSocket(process.id);
+
+        } catch (Exception e) {
+
+            // System.out.println(e);
+
+        }
+
+        try {
+
             System.out.println("Insert multicast group:");
             group_ip = scanner.nextLine();
             process.joinMulticastGroup(process, group_ip);
@@ -68,6 +86,7 @@ public class Process {
             while (process.isActive) {	
                 
                 process.receiveMessage(process);
+                process.receiveUnicastMessage(process);
                 String typeMessage = process.lastMessageReceived[0];
                 
                 if (typeMessage == "NEW_PROCESS_ARRIVED") {
@@ -163,7 +182,7 @@ public class Process {
 
                                 if (process.processesId[i] > process.id) {
 
-                                    // send unicast message
+                                    process.sendUnicastMessage("Can I be the Cortinator? My id is: " + process.id, process, process.processesId[i]);
 
                                 }
 
@@ -299,7 +318,7 @@ public class Process {
     private void sendMessage(String message, Process process) {
 
         try {
-
+            
             process.m = message.getBytes();
             process.messageOut = new DatagramPacket(m, m.length, process.group, 6789);
             process.multicastSocket.send(process.messageOut);	
@@ -311,6 +330,25 @@ public class Process {
 
         }
 
+    }
+
+    private void sendUnicastMessage(String message, Process process, int port) {
+
+        try {
+
+            process.socket = new DatagramSocket();
+            process.mUnicast = message.getBytes();
+            InetAddress aHost = InetAddress.getByName("localhost");
+            DatagramPacket request = new DatagramPacket(process.mUnicast,  message.length(), aHost, port);
+            process.socket.send(request);
+            process.bufferUnicast = new byte[1000];
+
+        } catch (Exception e) {
+
+            // System.out.println(e);
+
+        }
+        
     }
 
     private void receiveMessage(Process process) {
@@ -362,8 +400,27 @@ public class Process {
 
         } catch (Exception e) {
 
-            System.out.println("TIMEOUT");
+            // System.out.println("TIMEOUT");
             process.lastMessageReceived[0] = "CORDINATOR_FAILED";
+
+        }
+
+    }
+
+    private void receiveUnicastMessage(Process process) {
+
+        try {
+
+            process.socketReceive.setSoTimeout(5000);
+            process.bufferUnicast = new byte[1000];
+            DatagramPacket request = new DatagramPacket(process.bufferUnicast, process.bufferUnicast.length);
+            process.socketReceive.receive(request);
+            System.out.println(new String(request.getData()));
+
+
+        } catch (Exception e) {
+
+            // System.out.println("TIMEOUT RECEIVE UNICAST SOCKET");
 
         }
 
