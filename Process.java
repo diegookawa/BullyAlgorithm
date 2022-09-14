@@ -7,7 +7,6 @@ public class Process {
     public static final int NUMBER_OF_PROCESSES = 4;
     public static final int FAIL_MESSAGE_NUMBER = 10;
     private int id;
-    private int port;
     private int cordinatorMessagesSent;
     private int currentCordinator;
     private boolean isActive;
@@ -26,7 +25,6 @@ public class Process {
         this.id = id;
         this.isActive = true;
         this.isCordinator = false;
-        this.port = 0;
         this.multicastSocket = null;
         this.group = null;
         this.messageOut = null;
@@ -179,7 +177,7 @@ public class Process {
 
                 if (process.cordinatorMessagesSent == FAIL_MESSAGE_NUMBER) {
 
-                    process.sendMessage("Sorry I failed being the cordinator. My id was: " + process.id, process);
+                    // process.sendMessage("Sorry I failed being the cordinator. My id was: " + process.id, process);
                     process.cordinatorMessagesSent = 0;
                     process.isCordinator = false;
                     process.isActive = false;
@@ -307,6 +305,7 @@ public class Process {
 
         try {
 
+            process.multicastSocket.setSoTimeout(5000);
             process.messageIn = new DatagramPacket(process.buffer, process.buffer.length);
             process.multicastSocket.receive(process.messageIn);
             String messageReceived = new String(process.messageIn.getData());
@@ -351,7 +350,8 @@ public class Process {
 
         } catch (Exception e) {
 
-            System.out.println("Exception: " + e.getMessage());
+            System.out.println("TIMEOUT");
+            process.lastMessageReceived[0] = "CORDINATOR_FAILED";
 
         }
 
