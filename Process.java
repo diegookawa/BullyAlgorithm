@@ -44,6 +44,7 @@ public class Process {
         String message;
         Process process;
         boolean electionStarted = false;
+        boolean allProcessesArrived = false;
         int processesActive = 0;
         int option;
         int id;
@@ -88,6 +89,7 @@ public class Process {
                 
                 if (typeMessage == "ALL_PROCESSES_ARRIVED") {
 
+                    allProcessesArrived = true;
                     process.getIdNumbers(process.processesId, process.lastMessageReceived[1]);
                     if (process.verifyIdRepeated(process.processesId))
                         process.sendMessage("ERROR: SAME ID VALUE", process);
@@ -127,10 +129,11 @@ public class Process {
 
                 }
 
-                if (electionStarted) {
+                if (electionStarted && allProcessesArrived) {
 
                     System.out.println("\n\n\nELECTION HAS STARTED\n\n\n");
 
+                    process.currentCordinator = 0;
                     if (process.id == process.getHighestId(process.processesId)){
 
                         System.out.println("Your ID is the highest. Would you like to be the cordinator?\n1 - Yes\n2 - No");
