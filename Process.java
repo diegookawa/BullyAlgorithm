@@ -6,23 +6,25 @@ public class Process {
 
     public static final int NUMBER_OF_PROCESSES = 4;
     public static final int FAIL_MESSAGE_NUMBER = 10;
-    private int id;
-    private int cordinatorMessagesSent;
-    private int currentCordinator;
-    private boolean isActive;
-    private boolean isCordinator;
-    private byte[] m;
-    private byte[] buffer;
-    private byte[] mUnicast;
-    private byte[] bufferUnicast;
-    private int[] processesId;
-    private String[] lastMessageReceived;
-    private MulticastSocket multicastSocket;
-    private InetAddress group;
-    private DatagramPacket messageOut;
-    private DatagramPacket messageIn;
-    private DatagramSocket socket;
-    private DatagramSocket socketReceive;
+    public int id;
+    public int cordinatorMessagesSent;
+    public int currentCordinator;
+    public int higherProcesses;
+    public int processesAproved;
+    public boolean isActive;
+    public boolean isCordinator;
+    public byte[] m;
+    public byte[] buffer;
+    public byte[] mUnicast;
+    public byte[] bufferUnicast;
+    public int[] processesId;
+    public String[] lastMessageReceived;
+    public MulticastSocket multicastSocket;
+    public InetAddress group;
+    public DatagramPacket messageOut;
+    public DatagramPacket messageIn;
+    public DatagramSocket socket;
+    public DatagramSocket socketReceive;
 
     public Process (int id) {
 
@@ -42,6 +44,8 @@ public class Process {
         this.socketReceive = null;
         this.bufferUnicast = null;
         this.mUnicast = null;
+        this.higherProcesses = 0;
+        this.processesAproved = 0;
 
     }
 
@@ -86,9 +90,10 @@ public class Process {
             while (process.isActive) {	
                 
                 process.receiveMessage(process);
-                process.receiveUnicastMessage(process);
+                if (allProcessesArrived)
+                    process.receiveUnicastMessage(process);
                 String typeMessage = process.lastMessageReceived[0];
-                
+
                 if (typeMessage == "NEW_PROCESS_ARRIVED") {
                     
                     String portNumber = "";
@@ -126,6 +131,16 @@ public class Process {
 
                 }
 
+                if (typeMessage == "ELECTION_MESSAGE") {
+
+                    String portNumber = "";
+                    portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
+                    option = scanner.nextInt();
+                    scanner.nextLine();
+                    process.sendUnicastMessage(String.valueOf(option), process, Integer.parseInt(portNumber));
+
+                }
+
                 if (typeMessage == "ID_REPEATED") {
 
                     process.multicastSocket.leaveGroup(process.group);
@@ -152,8 +167,10 @@ public class Process {
 
                     System.out.println("\n\n\nELECTION HAS STARTED\n\n\n");
 
+                    process.higherProcesses = 0;
+                    process.processesAproved = 0;
                     process.currentCordinator = 0;
-                    if (process.id == process.getHighestId(process.processesId)){
+                    if (process.id == process.getHighestId(process.processesId)) {
 
                         System.out.println("Your ID is the highest. Would you like to be the cordinator?\n1 - Yes\n2 - No");
                         option = scanner.nextInt();
@@ -181,10 +198,33 @@ public class Process {
                             for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
 
                                 if (process.processesId[i] > process.id) {
-
-                                    process.sendUnicastMessage("Can I be the Cortinator? My id is: " + process.id, process, process.processesId[i]);
+                                    
+                                    process.higherProcesses++;
 
                                 }
+
+                            }
+
+                            for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
+
+                                if (process.processesId[i] > process.id) {
+                                    
+                                    process.sendUnicastMessage("Can I be the Cortinator? My id is: " + process.id + " \n1- Yes\n2 - No", process, process.processesId[i]);
+                                    process.receiveUnicastMessage(process);
+
+                                }
+
+                            }
+
+                            System.out.println(process.processesAproved + " " + process.higherProcesses);
+
+                            if (process.processesAproved == process.higherProcesses && process.processesAproved != 0){
+
+                                process.isCordinator = true;
+                                process.currentCordinator = process.id;
+                                process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
+                                process.higherProcesses = 0;
+                                process.processesAproved = 0;
 
                             }
 
@@ -219,7 +259,6 @@ public class Process {
 
                 process.buffer = new byte[1000];
                 System.out.flush();
-                Thread.sleep(1000);
                 
                 // System.out.println("\nWould you like to leave the group?\n1 - Yes\n2 - No");        
                 // option = scanner.nextInt();  
@@ -415,12 +454,34 @@ public class Process {
             process.bufferUnicast = new byte[1000];
             DatagramPacket request = new DatagramPacket(process.bufferUnicast, process.bufferUnicast.length);
             process.socketReceive.receive(request);
-            System.out.println(new String(request.getData()));
+            String messageReceived = new String(request.getData());
+            process.lastMessageReceived[1] = messageReceived;
+            System.out.println("\nReceived: " + messageReceived);
 
+            if (messageReceived.charAt(0) == 'C') {
+
+                process.lastMessageReceived[0] = "ELECTION_MESSAGE";
+
+            }
+
+            if (messageReceived.charAt(0) == '2') {
+
+                process.lastMessageReceived[0] = "CORDINATOR_FAILED";
+
+            }
+
+            if (messageReceived.charAt(0) == '1') {
+
+                process.processesAproved++;
+
+            }
 
         } catch (Exception e) {
-
-            // System.out.println("TIMEOUT RECEIVE UNICAST SOCKET");
+            
+            // process.isCordinator = true;
+            // process.currentCordinator = process.id;
+            // process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
+            // process.lastMessageReceived[0] = "NEW_CORDINATOR";
 
         }
 

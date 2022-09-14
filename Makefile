@@ -1,3 +1,3 @@
 all:
 
-	javac Process.java
+	javac ReceiveMulticastMessage.java | javac Process.java
