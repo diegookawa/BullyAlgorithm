@@ -156,7 +156,16 @@ public class Process {
 
                         if(option == 1) {
 
-                            // Begin Unicast algorithm
+                            for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
+
+                                if (process.processesId[i] > process.id) {
+
+                                    // send unicast message
+
+                                }
+
+                            }
+
                             option = 0;
     
                         }
