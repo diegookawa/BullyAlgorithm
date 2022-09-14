@@ -5,7 +5,7 @@ import java.util.Scanner;
 public class Process {
 
     public static final int NUMBER_OF_PROCESSES = 4;
-    public static final int FAIL_MESSAGE_NUMBER = 10;
+    public static final int FAIL_MESSAGE_NUMBER = 3;
     public int id;
     public int cordinatorMessagesSent;
     public int currentCordinator;
@@ -166,7 +166,7 @@ public class Process {
                 if (electionStarted && allProcessesArrived) {
 
                     System.out.println("\n\n\nELECTION HAS STARTED\n\n\n");
-
+    
                     process.higherProcesses = 0;
                     process.processesAproved = 0;
                     process.currentCordinator = 0;
@@ -450,7 +450,7 @@ public class Process {
 
         try {
 
-            process.socketReceive.setSoTimeout(5000);
+            process.socketReceive.setSoTimeout(7000);
             process.bufferUnicast = new byte[1000];
             DatagramPacket request = new DatagramPacket(process.bufferUnicast, process.bufferUnicast.length);
             process.socketReceive.receive(request);
