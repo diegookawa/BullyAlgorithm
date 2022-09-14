@@ -51,7 +51,7 @@ public class Process {
         int id;
 
         scanner = new Scanner(System.in);
-        System.out.println("Insert your ID (Must be a number between 1 and 4):");
+        System.out.println("Insert your ID/PORT:");
         id = scanner.nextInt();
         process = new Process(id);
         scanner.nextLine();
@@ -73,14 +73,18 @@ public class Process {
                 
                 if (typeMessage == "NEW_PROCESS_ARRIVED") {
                     
-                    process.processesId[processesActive] = Character.getNumericValue(process.lastMessageReceived[1].charAt(37));
+                    String portNumber = "";
+                    portNumber += process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38) + "" + process.lastMessageReceived[1].charAt(39) + "" + process.lastMessageReceived[1].charAt(40);
+                    process.processesId[processesActive] = Integer.parseInt(portNumber);
                     processesActive++;
                     
                 }
 
                 if (typeMessage == "NEW_CORDINATOR") {
 
-                    process.currentCordinator = Character.getNumericValue(process.lastMessageReceived[1].charAt(31));
+                    String portNumber = "";
+                    portNumber += process.lastMessageReceived[1].charAt(31) + "" + process.lastMessageReceived[1].charAt(32) + "" + process.lastMessageReceived[1].charAt(33) + "" + process.lastMessageReceived[1].charAt(34);
+                    process.currentCordinator = Integer.parseInt(portNumber);
 
                 }
                 
@@ -103,7 +107,7 @@ public class Process {
 
                 }
 
-                if (typeMessage == "ERROR") {
+                if (typeMessage == "ID_REPEATED") {
 
                     process.multicastSocket.leaveGroup(process.group);
                     break;
@@ -238,9 +242,14 @@ public class Process {
 
     private void getIdNumbers(int[] array, String message) {
 
+        int pos = 1;
+
         for (int i = 0; i < array.length; i++){
 
-            array[i] = Character.getNumericValue(message.charAt(i + 1));
+            String portNumber = "";
+            portNumber += message.charAt(pos) + "" + message.charAt(pos + 1) + "" + message.charAt(pos + 2) + "" + message.charAt(pos + 3);
+            array[i] = Integer.parseInt(portNumber);
+            pos += 4;
 
         }
 
@@ -325,6 +334,12 @@ public class Process {
             else if (messageReceived.charAt(0) == 'I') {
 
                 process.lastMessageReceived[0] = "NEW_CORDINATOR";
+
+            }
+
+            else if (messageReceived.charAt(0) == 'E') {
+
+                process.lastMessageReceived[0] = "ID_REPEATED";
 
             }
 
