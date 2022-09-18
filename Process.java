@@ -1,11 +1,10 @@
 import java.net.*;
-import java.io.*;
 import java.util.Scanner;
 
 public class Process {
 
     public static final int NUMBER_OF_PROCESSES = 4;
-    public static final int FAIL_MESSAGE_NUMBER = 3;
+    public static final int FAIL_MESSAGE_NUMBER = 8;
     public int id;
     public int cordinatorMessagesSent;
     public int currentCordinator;
@@ -29,8 +28,10 @@ public class Process {
     public Process (int id) {
 
         this.id = id;
-        this.isActive = true;
-        this.isCordinator = false;
+        this.cordinatorMessagesSent = 0;
+        this.currentCordinator = 0;
+        this.higherProcesses = 0;
+        this.processesAproved = 0;
         this.multicastSocket = null;
         this.group = null;
         this.messageOut = null;
@@ -38,15 +39,13 @@ public class Process {
         this.buffer = null;
         this.m = null;
         this.lastMessageReceived = null;
-        this.cordinatorMessagesSent = 0;
-        this.currentCordinator = 0;
         this.socket = null;
         this.socketReceive = null;
         this.bufferUnicast = null;
         this.mUnicast = null;
-        this.higherProcesses = 0;
-        this.processesAproved = 0;
-
+        this.isActive = true;
+        this.isCordinator = false;
+        
     }
 
     public static void main (String args[]) throws InterruptedException {
@@ -74,11 +73,7 @@ public class Process {
 
             process.socketReceive = new DatagramSocket(process.id);
 
-        } catch (Exception e) {
-
-            // System.out.println(e);
-
-        }
+        } catch (Exception e) {}
 
         try {
 
@@ -89,9 +84,11 @@ public class Process {
             
             while (process.isActive) {	
                 
-                process.receiveMessage(process);
-                if (allProcessesArrived)
+                if (electionStarted)
                     process.receiveUnicastMessage(process);
+                    
+                process.receiveMessage(process, electionStarted);
+
                 String typeMessage = process.lastMessageReceived[0];
 
                 if (typeMessage == "NEW_PROCESS_ARRIVED") {
@@ -105,9 +102,11 @@ public class Process {
 
                 if (typeMessage == "NEW_CORDINATOR") {
 
+                    option = 0;
                     String portNumber = "";
                     portNumber += process.lastMessageReceived[1].charAt(31) + "" + process.lastMessageReceived[1].charAt(32) + "" + process.lastMessageReceived[1].charAt(33) + "" + process.lastMessageReceived[1].charAt(34);
                     process.currentCordinator = Integer.parseInt(portNumber);
+                    electionStarted = false;
 
                 }
                 
@@ -132,7 +131,7 @@ public class Process {
                 }
 
                 if (typeMessage == "ELECTION_MESSAGE") {
-
+                    
                     String portNumber = "";
                     portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
                     option = scanner.nextInt();
@@ -166,7 +165,7 @@ public class Process {
                 if (electionStarted && allProcessesArrived) {
 
                     System.out.println("\n\n\nELECTION HAS STARTED\n\n\n");
-    
+                    
                     process.higherProcesses = 0;
                     process.processesAproved = 0;
                     process.currentCordinator = 0;
@@ -205,26 +204,47 @@ public class Process {
 
                             }
 
+                            boolean processAllowed = true;
+
                             for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
 
                                 if (process.processesId[i] > process.id) {
                                     
-                                    process.sendUnicastMessage("Can I be the Cortinator? My id is: " + process.id + " \n1- Yes\n2 - No", process, process.processesId[i]);
-                                    process.receiveUnicastMessage(process);
+                                    if (process.currentCordinator == 0) {
+                                        
+                                        process.sendUnicastMessage("Can I be the Cortinator? My id is: " + process.id + " \nWait for timeout or type (1) if no", process, process.processesId[i]);
+
+                                    }
 
                                 }
 
+                                
                             }
 
-                            System.out.println(process.processesAproved + " " + process.higherProcesses);
+                            for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
 
-                            if (process.processesAproved == process.higherProcesses && process.processesAproved != 0){
+                                if (process.processesId[i] > process.id) {
+                                    
+                                    if (process.currentCordinator == 0) {
+                                        
+                                        process.receiveUnicastMessage(process);
+                                        if (process.lastMessageReceived[0] == "ELECTION_NOT_ALLOWED")
+                                            processAllowed = false;
+                                    }
+
+                                }
+
+                                
+                            }
+
+                            if (processAllowed){
 
                                 process.isCordinator = true;
                                 process.currentCordinator = process.id;
                                 process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
                                 process.higherProcesses = 0;
                                 process.processesAproved = 0;
+                                electionStarted = false;
 
                             }
 
@@ -234,8 +254,6 @@ public class Process {
 
                     }
 
-                    electionStarted = false;
-
                 }
 
                 if (process.isCordinator) {    
@@ -243,12 +261,11 @@ public class Process {
                     process.sendMessage("Olá\n", process);
                     process.cordinatorMessagesSent++;
                     electionStarted = false;
-
+                    
                 }         
 
                 if (process.cordinatorMessagesSent == FAIL_MESSAGE_NUMBER) {
 
-                    // process.sendMessage("Sorry I failed being the cordinator. My id was: " + process.id, process);
                     process.cordinatorMessagesSent = 0;
                     process.isCordinator = false;
                     process.isActive = false;
@@ -259,22 +276,10 @@ public class Process {
 
                 process.buffer = new byte[1000];
                 System.out.flush();
-                
-                // System.out.println("\nWould you like to leave the group?\n1 - Yes\n2 - No");        
-                // option = scanner.nextInt();  
-                // scanner.nextLine();
-
-                // if (option == 1) {
-
-                //     process.multicastSocket.leaveGroup(process.group);
-                //     break;
-
-                // }
+                Thread.sleep(1000);
                 
             }
             
-            // scanner.close();
-
         } catch (Exception e) {
 
             System.out.println("Exception: " + e.getMessage());
@@ -293,16 +298,6 @@ public class Process {
         for (int i = 0; i < array.length; i++){
 
             array[i] = 0;
-
-        }
-
-    }
-
-    private void printArray(int[] array) {
-
-        for (int i = 0; i < array.length; i++){
-
-            System.out.print(array[i] + " ");
 
         }
 
@@ -382,19 +377,20 @@ public class Process {
             process.socket.send(request);
             process.bufferUnicast = new byte[1000];
 
-        } catch (Exception e) {
-
-            // System.out.println(e);
-
-        }
+        } catch (Exception e) {}
         
     }
 
-    private void receiveMessage(Process process) {
+    private void receiveMessage(Process process, boolean electionStarted) {
 
         try {
 
-            process.multicastSocket.setSoTimeout(5000);
+            if(!electionStarted)
+                process.multicastSocket.setSoTimeout(5000);
+                
+            else
+                process.multicastSocket.setSoTimeout(15000);
+
             process.messageIn = new DatagramPacket(process.buffer, process.buffer.length);
             process.multicastSocket.receive(process.messageIn);
             String messageReceived = new String(process.messageIn.getData());
@@ -439,7 +435,7 @@ public class Process {
 
         } catch (Exception e) {
 
-            // System.out.println("TIMEOUT");
+            System.out.println("TIMEOUT CORDINATOR FAILED");
             process.lastMessageReceived[0] = "CORDINATOR_FAILED";
 
         }
@@ -450,7 +446,7 @@ public class Process {
 
         try {
 
-            process.socketReceive.setSoTimeout(7000);
+            process.socketReceive.setSoTimeout(3000);
             process.bufferUnicast = new byte[1000];
             DatagramPacket request = new DatagramPacket(process.bufferUnicast, process.bufferUnicast.length);
             process.socketReceive.receive(request);
@@ -464,26 +460,15 @@ public class Process {
 
             }
 
-            if (messageReceived.charAt(0) == '2') {
-
-                process.lastMessageReceived[0] = "CORDINATOR_FAILED";
-
-            }
-
             if (messageReceived.charAt(0) == '1') {
 
-                process.processesAproved++;
+                System.out.print("ENTROU");
+                process.lastMessageReceived[0] = "ELECTION_NOT_ALLOWED";
 
             }
-
-        } catch (Exception e) {
             
-            // process.isCordinator = true;
-            // process.currentCordinator = process.id;
-            // process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
-            // process.lastMessageReceived[0] = "NEW_CORDINATOR";
 
-        }
+        } catch (Exception e) {}
 
     }
 

@@ -1,3 +1,3 @@
 all:
 
-	javac ReceiveMulticastMessage.java | javac Process.java
+	javac ReceiveMulticastMessage.java | javac ReceiveUnicastMessage.java | javac CordinatorThread.java | javac Process.java
