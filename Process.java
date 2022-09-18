@@ -100,15 +100,23 @@ public class Process {
                             @Override
                             public void run() {
 
-                                String portNumber = "";
-                                portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
-                                int option = scanner.nextInt();
-                                scanner.nextLine();
-                                if (option == 1) {
-            
-                                    process.sendMessage("NEW_ELECTION", process);
-                                    process.sendUnicastMessage(String.valueOf(option), process, Integer.parseInt(portNumber));
-                                    
+                                try {
+
+                                    String portNumber = "";
+                                    portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
+                                    int option = scanner.nextInt();
+                                    if (option == 1) {
+                
+                                        process.sendMessage("NEW_ELECTION", process);
+                                        process.sendUnicastMessage(String.valueOf(option), process, Integer.parseInt(portNumber));
+                                        
+                                    }
+
+                                } catch (Exception e) {
+
+                                    System.out.println("ENTROU AQUI");
+                                    timer.cancel();
+
                                 }
 
                             }
@@ -117,11 +125,7 @@ public class Process {
 
                             timer.scheduleAtFixedRate(task, 0, 3000);
 
-                        } catch (Exception e) {
-
-                            System.out.println("ENTROU AQUI");
-
-                        }
+                        } catch (Exception e) {}
                         
                     }
 
