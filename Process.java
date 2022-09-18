@@ -1,5 +1,7 @@
 import java.net.*;
 import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Process {
 
@@ -58,7 +60,7 @@ public class Process {
         boolean allProcessesArrived = false;
         int processesActive = 0;
         int option;
-        int id;
+        int id; 
 
         scanner = new Scanner(System.in);
         System.out.println("Insert your ID/PORT:");
@@ -84,10 +86,48 @@ public class Process {
             
             while (process.isActive) {	
                 
-                if (electionStarted)
+                if (electionStarted) {
+
                     process.receiveUnicastMessage(process);
+
+                    if (process.lastMessageReceived[0] == "ELECTION_MESSAGE") {
+
+                        try {
+
+                            Timer timer = new Timer();
+                            TimerTask task = new TimerTask() {
+                            
+                            @Override
+                            public void run() {
+
+                                String portNumber = "";
+                                portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
+                                int option = scanner.nextInt();
+                                scanner.nextLine();
+                                if (option == 1) {
+            
+                                    process.sendMessage("NEW_ELECTION", process);
+                                    process.sendUnicastMessage(String.valueOf(option), process, Integer.parseInt(portNumber));
+                                    
+                                }
+
+                            }
+
+                        };
+
+                            timer.scheduleAtFixedRate(task, 0, 3000);
+
+                        } catch (Exception e) {
+
+                            System.out.println("ENTROU AQUI");
+
+                        }
+                        
+                    }
+
+                }
                     
-                process.receiveMessage(process, electionStarted);
+                process.receiveMessage(process, electionStarted, false);
 
                 String typeMessage = process.lastMessageReceived[0];
 
@@ -130,13 +170,9 @@ public class Process {
 
                 }
 
-                if (typeMessage == "ELECTION_MESSAGE") {
-                    
-                    String portNumber = "";
-                    portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
-                    option = scanner.nextInt();
-                    scanner.nextLine();
-                    process.sendUnicastMessage(String.valueOf(option), process, Integer.parseInt(portNumber));
+                if (typeMessage == "NEW_ELECTION") {
+
+                    electionStarted = true;
 
                 }
 
@@ -221,30 +257,36 @@ public class Process {
                                 
                             }
 
-                            for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
+                            process.lastMessageReceived[0] = "";
+                            process.receiveMessage(process, false, true);
 
-                                if (process.processesId[i] > process.id) {
-                                    
-                                    if (process.currentCordinator == 0) {
+                            if (process.lastMessageReceived[0] != "NEW_ELECTION") {
+
+                                for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
+    
+                                    if (process.processesId[i] > process.id) {
                                         
-                                        process.receiveUnicastMessage(process);
-                                        if (process.lastMessageReceived[0] == "ELECTION_NOT_ALLOWED")
-                                            processAllowed = false;
+                                        if (process.currentCordinator == 0) {
+                                            
+                                            process.receiveUnicastMessage(process);
+                                            if (process.lastMessageReceived[0] == "ELECTION_NOT_ALLOWED")
+                                                processAllowed = false;
+                                        }
+    
                                     }
-
+                                    
                                 }
-
-                                
-                            }
-
-                            if (processAllowed){
-
-                                process.isCordinator = true;
-                                process.currentCordinator = process.id;
-                                process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
-                                process.higherProcesses = 0;
-                                process.processesAproved = 0;
-                                electionStarted = false;
+    
+                                if (processAllowed){
+    
+                                    process.isCordinator = true;
+                                    process.currentCordinator = process.id;
+                                    process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
+                                    process.higherProcesses = 0;
+                                    process.processesAproved = 0;
+                                    electionStarted = false;
+    
+                                }
 
                             }
 
@@ -381,7 +423,7 @@ public class Process {
         
     }
 
-    private void receiveMessage(Process process, boolean electionStarted) {
+    private void receiveMessage(Process process, boolean electionStarted, boolean newElectionProcess) {
 
         try {
 
@@ -427,6 +469,12 @@ public class Process {
 
             }
 
+            else if (messageReceived.charAt(0) == 'N') {
+
+                process.lastMessageReceived[0] = "NEW_ELECTION";
+
+            }
+
             else {
 
                 process.lastMessageReceived[0] = "ERROR";
@@ -435,8 +483,12 @@ public class Process {
 
         } catch (Exception e) {
 
-            System.out.println("TIMEOUT CORDINATOR FAILED");
-            process.lastMessageReceived[0] = "CORDINATOR_FAILED";
+            if(!newElectionProcess) {
+
+                process.lastMessageReceived[0] = "CORDINATOR_FAILED";
+                System.out.println("TIMEOUT CORDINATOR FAILED");
+
+            }
 
         }
 
@@ -462,7 +514,6 @@ public class Process {
 
             if (messageReceived.charAt(0) == '1') {
 
-                System.out.print("ENTROU");
                 process.lastMessageReceived[0] = "ELECTION_NOT_ALLOWED";
 
             }
