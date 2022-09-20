@@ -53,7 +53,7 @@ public class Process {
     }
 
     public static void main (String args[]) throws InterruptedException {
-        // 239.192.0.1 IP group
+        // 239.192.0.7 IP group
         Scanner scanner; 
         String group_ip;
         String message;
@@ -107,8 +107,10 @@ public class Process {
                                     try {
 
                                         if (++itr == 3) {
+
                                             newScanner.close();
                                             timer.cancel();
+                                            
                                         }
                                         String portNumber = "";
                                         portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
@@ -117,7 +119,7 @@ public class Process {
                                             
                                             process.sendMessage("NEW_ELECTION", process);
                                             process.sendUnicastMessage(String.valueOf(process.option), process, Integer.parseInt(portNumber));
-                                            
+
                                         }
 
                                     } catch (Exception e) {
