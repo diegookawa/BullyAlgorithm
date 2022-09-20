@@ -12,6 +12,7 @@ public class Process {
     public int currentCordinator;
     public int higherProcesses;
     public int processesAproved;
+    public int option;
     public boolean isActive;
     public boolean isCordinator;
     public byte[] m;
@@ -34,6 +35,7 @@ public class Process {
         this.currentCordinator = 0;
         this.higherProcesses = 0;
         this.processesAproved = 0;
+        this.option = 0;
         this.multicastSocket = null;
         this.group = null;
         this.messageOut = null;
@@ -59,7 +61,6 @@ public class Process {
         boolean electionStarted = false;
         boolean allProcessesArrived = false;
         int processesActive = 0;
-        int option;
         int id; 
 
         scanner = new Scanner(System.in);
@@ -96,34 +97,42 @@ public class Process {
 
                             Timer timer = new Timer();
                             TimerTask task = new TimerTask() {
-                            
-                            @Override
-                            public void run() {
+                                
+                                int itr = 0;
+                                Scanner newScanner = new Scanner(System.in);
 
-                                try {
+                                @Override
+                                public void run() {
 
-                                    String portNumber = "";
-                                    portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
-                                    int option = scanner.nextInt();
-                                    if (option == 1) {
-                
-                                        process.sendMessage("NEW_ELECTION", process);
-                                        process.sendUnicastMessage(String.valueOf(option), process, Integer.parseInt(portNumber));
-                                        
+                                    try {
+
+                                        if (++itr == 3) {
+                                            newScanner.close();
+                                            timer.cancel();
+                                        }
+                                        String portNumber = "";
+                                        portNumber += process.lastMessageReceived[1].charAt(35) + "" + process.lastMessageReceived[1].charAt(36) + "" + process.lastMessageReceived[1].charAt(37) + "" + process.lastMessageReceived[1].charAt(38);
+                                        process.option = newScanner.nextInt();
+                                        if (process.option == 1) {
+                                            
+                                            process.sendMessage("NEW_ELECTION", process);
+                                            process.sendUnicastMessage(String.valueOf(process.option), process, Integer.parseInt(portNumber));
+                                            
+                                        }
+
+                                    } catch (Exception e) {
+
+                                        timer.cancel();
+
                                     }
-
-                                } catch (Exception e) {
-
-                                    System.out.println("ENTROU AQUI");
-                                    timer.cancel();
 
                                 }
 
-                            }
-
                         };
-
-                            timer.scheduleAtFixedRate(task, 0, 3000);
+                            
+                            timer.scheduleAtFixedRate(task, 0, 1000);
+                            Thread.sleep(5000);
+                            timer.cancel();
 
                         } catch (Exception e) {}
                         
@@ -146,7 +155,7 @@ public class Process {
 
                 if (typeMessage == "NEW_CORDINATOR") {
 
-                    option = 0;
+                    process.option = 0;
                     String portNumber = "";
                     portNumber += process.lastMessageReceived[1].charAt(31) + "" + process.lastMessageReceived[1].charAt(32) + "" + process.lastMessageReceived[1].charAt(33) + "" + process.lastMessageReceived[1].charAt(34);
                     process.currentCordinator = Integer.parseInt(portNumber);
@@ -209,18 +218,19 @@ public class Process {
                     process.higherProcesses = 0;
                     process.processesAproved = 0;
                     process.currentCordinator = 0;
+
                     if (process.id == process.getHighestId(process.processesId)) {
 
                         System.out.println("Your ID is the highest. Would you like to be the cordinator?\n1 - Yes\n2 - No");
-                        option = scanner.nextInt();
-                        scanner.nextLine();
+                        process.option = scanner.nextInt();
+                        System.out.println(process.option);
 
-                        if (option == 1) {
+                        if (process.option == 1) {
 
                             process.isCordinator = true;
                             process.currentCordinator = process.id;
                             process.sendMessage("I am the Cordinator. My id is: " + process.id, process);
-                            option = 0;
+                            process.option = 0;
     
                         }
 
@@ -228,11 +238,11 @@ public class Process {
 
                     else {
 
-                        System.out.println("Your ID is not the highest. You can start an election though. Would you like to?\n1 - Yes\n2 - No");
-                        option = scanner.nextInt();
-                        scanner.nextLine();
+                        System.out.println("Your ID is not the highest. You can run for cordinator though. Would you like to?\n1 - Yes\n2 - No");
+                        process.option = scanner.nextInt();
+                        System.out.println(process.option);
 
-                        if(option == 1) {
+                        if(process.option == 1) {
 
                             for (int i = 0; i < NUMBER_OF_PROCESSES; i++) {
 
@@ -258,7 +268,6 @@ public class Process {
 
                                 }
 
-                                
                             }
 
                             process.lastMessageReceived[0] = "";
@@ -294,7 +303,7 @@ public class Process {
 
                             }
 
-                            option = 0;
+                            process.option = 0;
     
                         }
 
@@ -310,27 +319,30 @@ public class Process {
                     
                 }         
 
-                if (process.cordinatorMessagesSent == FAIL_MESSAGE_NUMBER) {
+                if (process.cordinatorMessagesSent >= FAIL_MESSAGE_NUMBER) {
 
+                    System.out.println("I FAILED");
                     process.cordinatorMessagesSent = 0;
                     process.isCordinator = false;
                     process.isActive = false;
                     scanner.close();
                     process.multicastSocket.leaveGroup(process.group);
+                    System.exit(1);
 
                 }
 
                 process.buffer = new byte[1000];
+                process.bufferUnicast = new byte[1000];
                 System.out.flush();
                 Thread.sleep(1000);
                 
             }
             
         } catch (Exception e) {
-
+            
             System.out.println("Exception: " + e.getMessage());
 
-        }  finally {
+        } finally {
 
             if (process.multicastSocket != null)
                 process.multicastSocket.close();
